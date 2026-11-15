@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Worldloom: play god</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2l12 7v14l-12 7-12-7V9z' fill='%232a1a10' stroke='%23c9a24a' stroke-width='2'/%3E%3Cpath d='M16 10l1.8 4.2 4.2.3-3.2 2.8 1 4.2-3.8-2.3-3.8 2.3 1-4.2-3.2-2.8 4.2-.3z' fill='%23f3e3b0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===== TOKENS ===== */
+:root {
+  --bg: #1b120c;
+  --paper: #f0e0b8;
+  --ink: #2a1d12;
+  --brass: #c9a24a;
+  --teal: #2a8a86;
+  --rose: #b8324f;
+  --focus: #ffd76a;
+  --ease: cubic-bezier(.3, .7, .2, 1);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .1 0 0 0 .32 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  --wood: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='120'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008 .45' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .05 0 0 0 0 .02 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='400' height='120' filter='url(%23w)'/%3E%3C/svg%3E");
+  --fibre: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .5' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .15 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23f)'/%3E%3C/svg%3E");
+  --font-display: "Almendra", Georgia, serif;
+  --font-ui: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+
+/* ===== BASE ===== */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: #f1dfb2;
+  font: 16px/1.5 var(--font-ui);
+  background: radial-gradient(ellipse at 50% -10%, #5b3a52 0, transparent 65%), var(--grain), var(--bg);
+  background-attachment: fixed;
+}
+h1, h2 { font-family: var(--font-display); font-weight: 400; margin: 0; }
+button, input {
+  font: inherit;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+button {
+  cursor: pointer;
+  color: #2a1608;
+  font-weight: 700;
+  background: linear-gradient(#ecce7c, #b88a2c);
+  border: 1px solid #6e4f14;
+  box-shadow: inset 0 1px #fff7, 0 3px 0 #5a3d10, 0 5px 8px #0006;
+  transition: transform .2s var(--ease);
+}
+button:hover { transform: translateY(-2px) rotate(-.5deg); }
+button:active { transform: translateY(2px); }
+button[aria-pressed="true"] {
+  color: #04201e;
+  background: linear-gradient(#6fdccb, #23807c);
+  border-color: #0d4b48;
+}
+input {
+  color: var(--ink);
+  background: #fbf1d6;
+  border: 1px solid #a98b5c;
+  box-shadow: inset 0 2px 4px #8a5a2044;
+}
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ===== LAYOUT ===== */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--wood), linear-gradient(#4b2f1c, #2d1a0e);
+  border-bottom: 4px double var(--brass);
+  box-shadow: 0 8px 22px #000a;
+}
+.brand h1 { font-size: 2rem; color: #f8e3a2; text-shadow: 0 2px 0 #000a, 0 0 20px #ffb84d77; }
+.clock { color: #d9c394; font-size: .9rem; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stage {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 230px;
+  gap: 14px;
+  padding: 14px 14px 48px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.panel {
+  align-self: start;
+  padding: 14px;
+  color: var(--ink);
+  background: var(--grain), radial-gradient(ellipse at 20% 0, #f6e9c4, transparent 70%), var(--paper);
+  border-radius: 16px 22px 14px 24px / 22px 14px 24px 16px;
+  box-shadow: 0 0 0 3px #7a5a2a66, 0 14px 28px #000a, inset 0 0 40px #8a5a2066;
+}
+.panel h2 { font-size: 1.25rem; margin: 12px 0 6px; }
+.panel h2:first-child { margin-top: 0; }
+.col { display: grid; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { width: 44px; padding: 0; border: 3px solid #5b3820; }
+.chips button[aria-pressed="true"] { border-color: var(--teal); box-shadow: 0 0 0 3px var(--focus); }
+.hint { font-size: .85rem; color: #6b563a; margin: 4px 0; }
+.center { position: relative; min-width: 0; }
+canvas {
+  display: block;
+  width: 100%;
+  border: 9px solid #5b3820;
+  border-radius: 14px;
+  background: #0b0907;
+  box-shadow: 0 0 0 2px var(--brass), inset 0 0 30px #000c, 0 10px 20px #0007;
+  touch-action: none;
+}
+#map { height: calc(100vh - 140px); min-height: 380px; }
+#tv { height: calc(100vh - 270px); min-height: 300px; margin: 8px 0; }
+#sky { height: 200px; border-width: 5px; }
+.town {
+  padding: 12px;
+  color: var(--ink);
+  background: var(--grain), var(--paper);
+  border-radius: 16px;
+  box-shadow: 0 0 0 3px #7a5a2a66, 0 14px 28px #000a;
+}
+.town[hidden], #map[hidden] { display: none; }
+.town h2 { font-size: 1.7rem; }
+.toasts { position: fixed; left: 12px; bottom: 40px; display: grid; gap: 8px; z-index: 9; }
+.toast {
+  max-width: 340px;
+  padding: 10px 14px;
+  color: var(--ink);
+  background: var(--grain), #f4e6bd;
+  border-left: 6px solid var(--rose);
+  border-radius: 4px 14px 14px 4px;
+  box-shadow: 0 4px 14px #0008;
+}
+
+/* ===== TEXTURE PASS ===== */
+select {
+  font: inherit;
+  min-height: 44px;
+  padding: 6px 12px;
+  color: var(--ink);
+  background: #fbf1d6;
+  border: 1px solid #a98b5c;
+  border-radius: 10px;
+}
+#skipn { width: 84px; }
+.panel, .town {
+  position: relative;
+  background: var(--fibre), var(--grain), radial-gradient(circle at 86% 10%, #c9a06a66 0, transparent 24%), radial-gradient(circle at 8% 92%, #8a5a2a55 0, transparent 32%), radial-gradient(ellipse at 20% 0, #f6e9c4, transparent 70%), var(--paper);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed #8a6a3a88;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.panel h2 { border-bottom: 2px solid #c9a24a88; }
+.log { margin: 0; padding-left: 18px; max-height: 240px; overflow: auto; font-size: .85rem; }
+.log li { margin-bottom: 4px; }
+#civ { white-space: pre-line; margin: 0; }
+.bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 8px;
+  background: radial-gradient(circle, #e8c870 0 2px, transparent 3px) 0 0 / 22px 8px repeat-x;
+  pointer-events: none;
+}
+.bar { position: relative; padding-bottom: 16px; }
+.bar { box-shadow: 0 8px 22px #000a, inset 0 -3px 0 #0006, inset 0 2px 0 #ffffff14; }
+
+/* ===== CREDIT ===== */
+.credit {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(6px, env(safe-area-inset-bottom));
+  font-size: 10px;
+  line-height: 1;
+  color: #b39d78;
+  opacity: .55;
+  text-decoration: none;
+}
+@media print { .credit { display: none; } }
+@media (max-width: 960px) {
+  .stage { grid-template-columns: 1fr; }
+  #map { height: 62vh; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><h1 id="wname">Worldloom</h1><div class="clock" id="clock"></div></div>
+  <div class="row">
+    <button data-speed="0">Pause time</button>
+    <button data-speed="1">Play</button>
+    <button data-speed="4">Fast</button>
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
+    <button id="music">Music on</button>
+    <input id="skipn" type="number" min="1" value="10" aria-label="How much time to skip">
+    <select id="skipu" aria-label="Unit of time"><option value="1">hours</option><option value="24">days</option><option value="720" selected>months</option><option value="8640">years</option></select>
+    <button id="skip">Skip forward</button>
+  </div>
+  <div class="row">
+    <input id="seed" aria-label="World seed" spellcheck="false">
+    <button id="weave">Weave a new world</button>
+  </div>
+</header>
+<main class="stage">
+  <aside class="panel">
+    <h2>Your powers</h2>
+    <div class="col" id="powers">
+      <button data-tool="look">Look closer</button>
+      <button data-tool="paint">Paint the land</button>
+      <button data-tool="town">Found a town</button>
+      <button data-tool="bless">Bless</button>
+      <button data-tool="smite">Smite</button>
+      <button data-tool="war">Incite war</button>
+    </div>
+    <h2>Land to paint</h2>
+    <div class="chips" id="chips"></div>
+    <p class="hint" id="hint"></p>
+  </aside>
+  <section class="center">
+    <canvas id="map" aria-label="World map. Drag to pan, scroll to zoom."></canvas>
+    <div class="town" id="town" hidden>
+      <div class="row"><h2 id="tname"></h2><button id="tclose">Back to the map</button></div>
+      <p id="tinfo"></p>
+      <canvas id="tv" aria-label="Town view"></canvas>
+      <div class="row" id="tbuild"></div>
+    </div>
+  </section>
+  <aside class="panel">
+    <h2>Under your cursor</h2>
+    <p id="info">Move over the map to see what is there.</p>
+    <h2>Civilization</h2>
+    <p id="civ"></p>
+    <h2>Grand events</h2>
+    <div class="col" id="events"></div>
+    
+    
+    
+    
+    
+    <h2>Chronicle</h2>
+    <p class="hint" id="skiptxt"></p>
+    <ol class="log" id="log"></ol>
+  </aside>
+</main>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<a class="credit" href="https://averybeuth.xyz" target="_blank" rel="noopener noreferrer">averybeuth.xyz</a>
+
+<script>
+(() => {
+'use strict';
+
+/* ===== HELPERS ===== */
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const rad = Math.PI / 180;
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hs = (s) => { let h = 1779033703 ^ s.length; for (let i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; } h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); return (h ^ h >>> 16) >>> 0; };
+const rng = (s) => { let a = hs(s); return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+const lat = (x, y, k) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + k | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
+const vn = (x, y, k) => { const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), a = lat(xi, yi, k), b = lat(xi + 1, yi, k), c = lat(xi, yi + 1, k), d = lat(xi + 1, yi + 1, k); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+const fbm = (x, y, k) => { let s = 0, a = .5, f = 1; for (let i = 0; i < 4; i++) { s += a * vn(x * f, y * f, k + i * 77); a /= 2; f *= 2; } return s / .9375; };
+const toast = (m) => { const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; $('#toasts').append(d); setTimeout(() => d.remove(), 4500); };
+
+/* ===== WORLD DATA ===== */
+const W = 480, H = 340, R = 22;
+const NAMES = ['water', 'plains', 'forest', 'desert', 'mountain', 'tundra', 'swamp'];
+const BI = { water: { c: '#3b86a8', food: 0 }, plains: { c: '#a9b866', food: 2 }, forest: { c: '#4f8a45', food: 1.4 }, desert: { c: '#dcc079', food: .5 }, mountain: { c: '#948a7c', food: .6 }, tundra: { c: '#d2dde0', food: .6 }, swamp: { c: '#68825c', food: 1 } };
+const SCALES = [[0, 2, 4, 5, 7, 9, 11], [0, 2, 3, 5, 7, 8, 10], [0, 2, 3, 5, 7, 9, 10], [0, 1, 3, 5, 7, 8, 10], [0, 2, 4, 6, 7, 9, 11], [0, 2, 4, 5, 7, 9, 10], [0, 3, 5, 7, 10]];
+const SYL = ['ar', 'bel', 'cor', 'dun', 'el', 'fen', 'gor', 'hal', 'is', 'kar', 'lor', 'mir', 'nor', 'ol', 'pel', 'ran', 'sil', 'tor', 'ul', 'vor', 'wyn', 'yar'];
+const NB = [[[1, 0], [0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]], [[1, 0], [1, -1], [0, -1], [-1, 0], [0, 1], [1, 1]]];
+const PHASES = ['new moon', 'waxing crescent', 'first quarter', 'waxing gibbous', 'full moon', 'waning gibbous', 'last quarter', 'waning crescent'];
+const syl = (r) => { let n = 2 + (r() * 2 | 0), s = ''; while (n--) s += SYL[r() * SYL.length | 0]; return s[0].toUpperCase() + s.slice(1); };
+const nbrs = (q, r) => NB[r & 1].map(([a, b]) => [q + a, r + b]).filter(([a, b]) => a >= 0 && b >= 0 && a < W && b < H).map(([a, b]) => b * W + a);
+
+function buildWorld(seed) {
+  const r = rng(seed), k = hs(seed) | 0, tiles = [];
+  for (let y = 0; y < H; y++) for (let q = 0; q < W; q++) {
+    const x = q + (y & 1 ? .5 : 0), d = Math.max(Math.abs(x / W - .5), Math.abs(y / H - .5)) * 2;
+    const e = ((fbm(x * .035, y * .035, k + 9) * .55 + fbm(x * .13, y * .13, k) * .45) - .5) * 1.7 + .5 - Math.pow(d, 3) * .5, m = fbm(x * .17 + 40, y * .17 + 40, k + 5), t = 1 - Math.abs(y / H - .5) * 1.7 - (e - .4) * .6;
+    const b = e < .4 ? 'water' : e > .7 ? 'mountain' : t < .28 ? 'tundra' : (m > .62 && e < .5) ? 'swamp' : m > .5 ? 'forest' : (m < .34 && t > .45) ? 'desert' : 'plains';
+    tiles.push({ e: d < .06 ? Math.max(e, .45) : e, b: d < .06 && b === 'water' ? 'plains' : b }); // keep the starting area on dry land
+  }
+  const high = tiles.map((t, i) => i).filter((i) => tiles[i].e > .58 && tiles[i].b !== 'water');
+  for (let n = 0; n < 200 && high.length; n++) {
+    let cur = high[r() * high.length | 0];
+    for (let g = 0; g < 400; g++) {
+      let best = -1;
+      for (const j of nbrs(cur % W, cur / W | 0)) if (tiles[j].e < tiles[cur].e && (best < 0 || tiles[j].e < tiles[best].e)) best = j;
+      if (best < 0) break; // rivers only step to strictly lower ground
+      tiles[cur].rv = best; if (tiles[best].b === 'water') break; cur = best;
+    }
+  }
+  const land = tiles.map((t, i) => i).filter((i) => !['water', 'mountain'].includes(tiles[i].b) && Math.hypot(i % W - W / 2, (i / W | 0) - H / 2) < 16).sort((a, b) => Math.hypot(a % W - W / 2, (a / W | 0) - H / 2) - Math.hypot(b % W - W / 2, (b / W | 0) - H / 2)), towns = []; // the first settlements start near the middle of a much larger world
+  ['town', 'town', 'town', 'town', 'ruin', 'ruin'].forEach((kind) => { const i = land.splice(r() * Math.min(land.length, 22) | 0, 1)[0], t = kind === 'town'; towns.push({ i, name: syl(r), pop: t ? 40 + (r() * 80 | 0) : 0, h: t ? 6 : 0, f: t ? 2 : 0, t: 0, w: 0, kind }); });
+  const order = NAMES.map((n, i) => i).sort(() => r() - .5), scales = {}, bpm = {};
+  NAMES.forEach((n, i) => { scales[n] = order[i]; bpm[n] = 58 + (r() * 44 | 0); });
+  return {
+    name: syl(r) + ['mark', 'vale', 'reach', 'fall'][r() * 4 | 0], tiles, towns, scales, bpm, root: 36 + (r() * 12 | 0), months: Array.from({ length: 12 }, () => syl(r)),
+    prog: [[0, 5, 3, 4], [0, 3, 4, 0], [0, 2, 3, 4], [5, 3, 0, 4]][r() * 4 | 0], mel: Array.from({ length: 16 }, () => r() < .5 ? -1 : [0, 2, 4, 7, 5, 1][r() * 6 | 0]),
+    lat: 20 + r() * 45, stars: Array.from({ length: 160 }, () => ({ ra: r() * 2 * Math.PI, dec: Math.asin(r() * 2 - 1), m: r() * 5 }))
+  };
+}
+
+class Seen { // a bit per hex, so a world of 163,200 hexes stays cheap to save and undo
+  constructor(rle) {
+    this.b = new Uint8Array(W * H); this.size = 0; this.q0 = 1e9; this.q1 = -1; this.r0 = 1e9; this.r1 = -1;
+    if (rle) { let p = 0; rle.split(',').forEach((n, k) => { n = +n; if (k % 2) { this.b.fill(1, p, p + n); for (let i = p; i < p + n; i++) this.note(i); this.size += n; } p += n; }); }
+  }
+  note(i) { const q = i % W, r = i / W | 0; if (q < this.q0) this.q0 = q; if (q > this.q1) this.q1 = q; if (r < this.r0) this.r0 = r; if (r > this.r1) this.r1 = r; }
+  has(i) { return this.b[i] === 1; }
+  add(i) { if (!this.b[i]) { this.b[i] = 1; this.size++; this.note(i); } }
+  rle() { const o = []; let v = 0, run = 0; for (let i = 0; i < this.b.length; i++) { if (this.b[i] === v) run++; else { o.push(run); v = this.b[i]; run = 1; } } o.push(run); return o.join(','); }
+}
+/* ===== STATE ===== */
+const S = { autofit: true, civ: { era: 0, sci: 0, col: 0, wars: [], seen: new Seen() }, seed: 'ember-vale', w: null, clock: 6 * 60, speed: 1, tool: 'look', biome: 'forest', focus: 0, hover: -1, view: 'map', tw: null, unsaved: false, sk: null, phase: -1 };
+const V = { x: 0, y: 0, k: 1, fit: true };
+const U = [], Rd = [];
+let dirty = true, armed = false, armTimer = 0;
+const KEY = 'worldloom.god.v3';
+const townAt = (i) => S.w.towns.find((t) => t.i === i);
+const hourOf = () => (S.clock % 1440) / 60;
+const dpr = () => devicePixelRatio || 1;
+
+/* ===== SNAPSHOTS ===== */
+const snap = () => ({ bio: S.w.tiles.map((t) => t.b[0]).join(''), towns: JSON.stringify(S.w.towns), clock: S.clock, civ: JSON.stringify({ ...S.civ, seen: S.civ.seen.rle() }), ships: JSON.stringify(ships) });
+function applySnap(o) {
+  S.w.tiles.forEach((t, i) => { t.b = NAMES.find((n) => n[0] === o.bio[i]) || t.b; });
+  S.w.towns = JSON.parse(o.towns); S.clock = o.clock; ships = o.ships ? JSON.parse(o.ships) : []; if (o.civ) { const c = JSON.parse(o.civ); S.civ = { ...c, seen: new Seen(c.seen) }; } if (S.view === 'town') closeTown(); changed();
+}
+function act(fn) { U.push(snap()); if (U.length > 40) U.shift(); Rd.length = 0; fn(); changed(); }
+function undo() { if (!U.length) return toast('Nothing to undo yet. Use one of your powers first.'); Rd.push(snap()); applySnap(U.pop()); }
+function redo() { if (!Rd.length) return toast('Nothing to redo. Undo something first.'); U.push(snap()); applySnap(Rd.pop()); }
+function save() {
+  if (!S.unsaved) return;
+  try { localStorage.setItem(KEY, JSON.stringify({ seed: S.seed, ...snap() })); S.unsaved = false; hud(); } catch (e) { S.unsaved = false; toast('Autosave is blocked in this browser, so this world will vanish on reload.'); }
+}
+function load() {
+  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.seed) { S.seed = o.seed; S.w = buildWorld(o.seed); applySnap(o); return true; } } catch (e) { /* start a fresh world */ }
+  return false;
+}
+function newWorld(seed) { S.autofit = true; ships = []; chron.length = 0; S.civ = { era: 0, sci: 0, col: 0, wars: [], seen: new Seen() }; S.seed = seed; S.w = buildWorld(seed); S.clock = 6 * 60; S.focus = S.w.towns[0].i; V.fit = true; U.length = Rd.length = 0; if (S.view === 'town') closeTown(); changed(); }
+
+/* ===== MAP GEOMETRY ===== */
+const center = (i) => [R * Math.sqrt(3) * (i % W + ((i / W | 0) & 1 ? .5 : 0)), R * 1.5 * (i / W | 0)];
+function hexAt(e) {
+  const wx = (e.offsetX * dpr() - V.x) / V.k, wy = (e.offsetY * dpr() - V.y) / V.k; let best = -1, bd = R * R;
+  const c0 = hexOfPx(wx, wy); [c0, ...nbrs(c0 % W, c0 / W | 0)].forEach((i) => { const [cx, cy] = center(i), d = (cx - wx) ** 2 + (cy - wy) ** 2; if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+function sizeCanvas(c) { const d = dpr(), w = c.clientWidth * d | 0, h = c.clientHeight * d | 0; if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); return g; }
+
+/* ===== SKY ===== */
+function skyNow() {
+  const w = S.w, n = S.clock / 1440, la = w.lat * rad, sra = 2 * Math.PI * n / 360, sdec = .41 * Math.sin(sra), lst = sra + (hourOf() - 12) * 15 * rad, el = 2 * Math.PI * n / 29.5;
+  const h = (ra, dec) => { const ha = lst - ra; return { alt: Math.asin(Math.sin(dec) * Math.sin(la) + Math.cos(dec) * Math.cos(la) * Math.cos(ha)), az: Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(dec) * Math.cos(la)) + Math.PI }; };
+  return { sun: h(sra, sdec), moon: { ...h(sra + el, .35 * Math.sin(2 * Math.PI * n / 27.3)), ill: (1 - Math.cos(el)) / 2, ph: Math.round(((el / rad % 360 + 360) % 360) / 45) % 8 }, stars: w.stars.map((s) => ({ ...h(s.ra, s.dec), m: s.m })) };
+}
+function drawSky() {
+  const c = $('#sky'), g = sizeCanvas(c), k = S.sk, R0 = Math.min(c.width, c.height) / 2 - 8, cx = c.width / 2, cy = c.height / 2, up = clamp((k.sun.alt / rad + 18) / 18, 0, 1);
+  const P = (o) => { const r = Math.tan((Math.PI / 2 - o.alt) / 2); return [cx - R0 * r * Math.sin(o.az), cy - R0 * r * Math.cos(o.az)]; };
+  g.fillStyle = `rgb(${5 + up * 65 | 0},${8 + up * 102 | 0},${18 + up * 152 | 0})`; g.beginPath(); g.arc(cx, cy, R0, 0, 7); g.fill();
+  g.fillStyle = '#fff'; k.stars.forEach((s) => { if (s.alt <= 0) return; const [x, y] = P(s); g.globalAlpha = clamp(1 - up * 1.1, .05, 1); g.beginPath(); g.arc(x, y, Math.max(.8, 2.4 - s.m * .5), 0, 7); g.fill(); });
+  g.globalAlpha = 1;
+  if (k.moon.alt > 0) { const [x, y] = P(k.moon); g.fillStyle = '#e9e4cf'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); }
+  if (k.sun.alt > 0) { const [x, y] = P(k.sun); g.fillStyle = '#ffd76a'; g.beginPath(); g.arc(x, y, 9, 0, 7); g.fill(); }
+  $('#skyread').textContent = `${k.sun.alt > 0 ? 'Daytime' : 'Night'}. The moon is ${PHASES[k.moon.ph]}, ${(k.moon.ill * 100).toFixed(0)}% lit.`;
+}
+
+/* ===== MAP DRAWING ===== */
+function glyph(g, b, cx, cy, i) {
+  const o = (i * 7 % 5) - 2; g.save(); g.strokeStyle = 'rgba(40,25,10,.55)'; g.lineWidth = 1.4; g.lineCap = 'round'; g.beginPath();
+  if (b === 'mountain') { g.moveTo(cx - 9, cy + 6); g.lineTo(cx - 2, cy - 7); g.lineTo(cx + 3, cy + 1); g.lineTo(cx + 6, cy - 3); g.lineTo(cx + 11, cy + 6); }
+  else if (b === 'forest') [-7, 1, 8].forEach((d, n) => { const y = cy + 6 - n % 2 * 4; g.moveTo(cx + d, y); g.lineTo(cx + d + 3, y - 8); g.lineTo(cx + d + 6, y); });
+  else if (b === 'water') { g.globalAlpha = .6; g.moveTo(cx - 8, cy + o); g.quadraticCurveTo(cx - 4, cy - 4 + o, cx, cy + o); g.quadraticCurveTo(cx + 4, cy + 4 + o, cx + 8, cy + o); }
+  else if (b === 'desert') for (let n = 0; n < 4; n++) { g.moveTo(cx + n * 5 - 8 + o, cy + n % 2 * 6 - 3); g.lineTo(cx + n * 5 - 7 + o, cy + n % 2 * 6 - 3); }
+  else if (b === 'swamp') [-6, 0, 6].forEach((d) => { g.moveTo(cx + d, cy + 6); g.lineTo(cx + d, cy - 3); });
+  else if (b === 'tundra') { g.moveTo(cx - 5, cy - 2); g.lineTo(cx + 5, cy - 2); g.moveTo(cx, cy - 7); g.lineTo(cx, cy + 3); }
+  else { g.moveTo(cx - 8, cy + 4); g.quadraticCurveTo(cx, cy - 3, cx + 8, cy + 4); }
+  g.stroke(); g.restore();
+}
+function hexPath(g, cx, cy) { g.beginPath(); for (let i = 0; i < 6; i++) g[i ? 'lineTo' : 'moveTo'](cx + Math.cos((60 * i - 30) * rad) * R, cy + Math.sin((60 * i - 30) * rad) * R); g.closePath(); }
+const tier = (p) => p < 40 ? 'hamlet' : p < 120 ? 'village' : p < 300 ? 'town' : p < 700 ? 'city' : 'metropolis';
+const FC = ['#b8324f', '#2a8a86', '#d9a21b', '#6a4fb0', '#4a8a2a', '#c96a2b'];
+const fcOf = (t) => t.fc ?? t.i % 6;
+const ERAS = ['Stone age', 'Bronze age', 'Iron age', 'Age of sail', 'Industrial age', 'Atomic age', 'Space age', 'Star age'];
+const tierIdx = (p) => p < 40 ? 0 : p < 120 ? 1 : p < 300 ? 2 : p < 700 ? 3 : 4;
+function drawTownIcon(g, t) {
+  const [cx, cy] = center(t.i);
+  if (t.kind === 'town') { g.fillStyle = FC[fcOf(t)]; g.fillRect(cx + 9, cy - 17, 2, 14); g.fillRect(cx + 11, cy - 17, 8, 5); if (t.w) { g.strokeStyle = '#4a3a2a'; g.lineWidth = 2.5; g.beginPath(); g.arc(cx, cy, 15, 0, 7); g.stroke(); } }
+  if (t.kind === 'ruin') { g.fillStyle = '#6b6258'; g.beginPath(); g.moveTo(cx - 8, cy + 6); g.lineTo(cx - 6, cy - 4); g.lineTo(cx - 1, cy + 1); g.lineTo(cx + 3, cy - 6); g.lineTo(cx + 8, cy + 6); g.closePath(); g.fill(); }
+  else for (let n = 0; n < clamp(Math.ceil(t.pop / 70), 1, 6); n++) { const x = cx - 12 + n * 5, y = cy + 4 - n % 2 * 5; g.fillStyle = '#f3e3b0'; g.fillRect(x, y - 4, 7, 6); g.fillStyle = '#b8324f'; g.beginPath(); g.moveTo(x - 1, y - 4); g.lineTo(x + 3.5, y - 9); g.lineTo(x + 8, y - 4); g.fill(); }
+  if (V.k > .6) { g.fillStyle = '#fff'; g.strokeStyle = '#000a'; g.lineWidth = 3; g.font = '11px sans-serif'; g.textAlign = 'center'; const s = t.kind === 'ruin' ? t.name + ' (ruin)' : `${t.name} · ${tier(t.pop)} ${Math.round(t.pop)}`; g.strokeText(s, cx, cy + 22); g.fillText(s, cx, cy + 22); }
+}
+const noiseTile = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), d = g.createImageData(128, 128), r = rng('paper'); for (let i = 0; i < d.data.length; i += 4) { d.data[i] = d.data[i + 1] = d.data[i + 2] = 120 + r() * 135 | 0; d.data[i + 3] = 255; } g.putImageData(d, 0, 0); return c; })();
+let noisePat = null;
+let rockets = [];
+function visible(c) { // only hexes on screen and already discovered are ever drawn
+  const rs = R * 1.5, cw = R * Math.sqrt(3), x0 = -V.x / V.k - 40, x1 = (c.width - V.x) / V.k + 40, y0 = -V.y / V.k - 40, y1 = (c.height - V.y) / V.k + 40, out = [];
+  const r0 = Math.max(0, Math.floor(y0 / rs)), r1 = Math.min(H - 1, Math.ceil(y1 / rs)), q0 = Math.max(0, Math.floor(x0 / cw) - 1), q1 = Math.min(W - 1, Math.ceil(x1 / cw));
+  for (let r = r0; r <= r1; r++) for (let q = q0; q <= q1; q++) { const i = r * W + q; if (S.omni || S.civ.seen.has(i)) out.push(i); }
+  return out;
+}
+const hexOfPx = (x, y) => { const r = clamp(Math.round(y / (R * 1.5)), 0, H - 1), q = clamp(Math.round(x / (R * Math.sqrt(3)) - (r & 1) * .5), 0, W - 1); return r * W + q; };
+function landLine(a, b) { // a road only exists if the straight line between two towns stays on land
+  const [x1, y1] = center(a), [x2, y2] = center(b), n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / (R * 1.2));
+  for (let k = 1; k < n; k++) { const t = S.w.tiles[hexOfPx(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n)].b; if (t === 'water' || t === 'mountain') return false; }
+  return true;
+}
+function drawRoads(g) {
+  const T = S.w.towns.filter((t) => t.kind === 'town' && t.pop >= 60); g.save(); g.strokeStyle = 'rgba(110,78,44,.9)'; g.lineWidth = 3; g.setLineDash([7, 4]);
+  for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) { const [x1, y1] = center(T[i].i), [x2, y2] = center(T[j].i); if (Math.hypot(x2 - x1, y2 - y1) < R * 1.73 * 7 && landLine(T[i].i, T[j].i)) { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); } }
+  g.restore();
+}
+function drawRockets(g) {
+  const now = performance.now(); rockets = rockets.filter((k) => now - k.t0 < 3000); if (rockets.length) S.easing = true;
+  rockets.forEach((k) => { const [x, y] = center(k.i), u = (now - k.t0) / 3000, yy = y - 14 - u * u * 200 / V.k; g.fillStyle = `rgba(255,190,70,${1 - u})`; g.beginPath(); g.moveTo(x - 4, yy + 8); g.lineTo(x, yy + 10 + 26 * (1 - u)); g.lineTo(x + 4, yy + 8); g.fill(); g.fillStyle = '#f4f0e6'; g.fillRect(x - 3, yy - 8, 6, 16); g.fillStyle = '#d62839'; g.beginPath(); g.moveTo(x - 3, yy - 8); g.lineTo(x, yy - 15); g.lineTo(x + 3, yy - 8); g.fill(); });
+}
+function drawMap() {
+  const c = $('#map'), g = sizeCanvas(c);
+  if (S.autofit) { // the frame grows to hold whatever has been explored
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    const bb = S.omni ? { q0: 0, q1: W - 1, r0: 0, r1: H - 1 } : S.civ.seen; if (bb.q1 >= 0) { x0 = R * Math.sqrt(3) * bb.q0; x1 = R * Math.sqrt(3) * (bb.q1 + .5); y0 = R * 1.5 * bb.r0; y1 = R * 1.5 * bb.r1; }
+    if (x1 > x0 - 1) {
+      const tk = Math.min(c.width / (x1 - x0 + R * 5), c.height / (y1 - y0 + R * 5), 1.8 * dpr()), tx = c.width / 2 - (x0 + x1) / 2 * tk, ty = c.height / 2 - (y0 + y1) / 2 * tk, e = calm || V.fit ? 1 : .12;
+      V.k += (tk - V.k) * e; V.x += (tx - V.x) * e; V.y += (ty - V.y) * e; V.fit = false;
+      S.easing = Math.abs(tk - V.k) > .002 * tk || Math.abs(tx - V.x) > 1 || Math.abs(ty - V.y) > 1;
+    }
+  }
+  g.fillStyle = '#0b0907'; g.fillRect(0, 0, c.width, c.height); g.setTransform(V.k, 0, 0, V.k, V.x, V.y);
+  const T = S.w.tiles, vis = visible(c), tiny = V.k < .3;
+  vis.forEach((i) => {
+    const t = T[i], [cx, cy] = center(i); if (!S.omni && !S.civ.seen.has(i)) return; // undiscovered land is not drawn yet
+    if (tiny) { g.fillStyle = BI[t.b].c; g.fillRect(cx - 19.5, cy - 17, 39, 34); return; } // zoomed far out: cheap squares
+    hexPath(g, cx, cy); g.fillStyle = BI[t.b].c; g.fill();
+    g.fillStyle = t.e > .55 ? `rgba(255,248,220,${(t.e - .55) * .5})` : `rgba(10,25,50,${(.55 - t.e) * (t.b === 'water' ? .9 : .4)})`; g.fill(); g.fillStyle = ((i * 2654435761) >>> 0) % 7 < 3 ? 'rgba(255,240,200,.08)' : 'rgba(30,15,0,.08)'; g.fill(); // hillshade, sea depth and mottling
+    g.strokeStyle = 'rgba(30,20,10,.3)'; g.lineWidth = 1; g.stroke(); glyph(g, t.b, cx, cy, i);
+    if (t.b === 'water' && nbrs(i % W, i / W | 0).some((j) => T[j].b !== 'water')) { g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 2.5; g.stroke(); } // coastal foam
+  });
+  g.strokeStyle = '#6fb0d8'; g.lineWidth = 3; g.lineCap = 'round';
+  vis.forEach((i) => { const t = T[i]; if (t.rv === undefined || t.b === 'water' || tiny) return; const [a, b] = center(i), [x, y] = center(t.rv); g.beginPath(); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); });
+  drawRoads(g);
+  S.civ.wars.forEach((w) => { const [x1, y1] = center(w.a), [x2, y2] = center(w.b); g.strokeStyle = '#d62839'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]); g.fillStyle = '#d62839'; g.font = 'bold 16px sans-serif'; g.textAlign = 'center'; g.fillText('\u2715', (x1 + x2) / 2, (y1 + y2) / 2 + 5); });
+  S.w.towns.forEach((t) => drawTownIcon(g, t));
+  if (S.hl >= 0) { const [x, y] = center(S.hl); g.strokeStyle = '#ffd76a'; g.lineWidth = 4; g.beginPath(); g.arc(x, y, R * 1.1, 0, 7); g.stroke(); }
+  drawRockets(g);
+  ships.forEach((s) => { const k = Math.floor(s.t), [x0, y0] = center(s.p[k]), [x1, y1] = center(s.p[Math.min(k + 1, s.p.length - 1)]), f = s.t - k, x = x0 + (x1 - x0) * f, y = y0 + (y1 - y0) * f; g.fillStyle = '#5b3820'; g.beginPath(); g.moveTo(x - 7, y); g.lineTo(x + 7, y); g.lineTo(x + 4, y + 4); g.lineTo(x - 4, y + 4); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 6, y - 1); g.lineTo(x, y - 1); g.fill(); });
+  if (S.hover >= 0) { const [cx, cy] = center(S.hover); hexPath(g, cx, cy); g.strokeStyle = '#ffd76a'; g.lineWidth = 3; g.stroke(); }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'multiply'; g.globalAlpha = .28; noisePat = noisePat || g.createPattern(noiseTile, 'repeat'); g.fillStyle = noisePat; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; // paper grain
+  const vg = g.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * .35, c.width / 2, c.height / 2, Math.max(c.width, c.height) * .75); vg.addColorStop(0, 'rgba(40,20,5,0)'); vg.addColorStop(1, 'rgba(40,20,5,.55)'); g.fillStyle = vg; g.fillRect(0, 0, c.width, c.height);
+  const d = dpr(); g.strokeStyle = '#c9a24a'; g.lineWidth = 3 * d; g.strokeRect(10 * d, 10 * d, c.width - 20 * d, c.height - 20 * d); g.lineWidth = d; g.strokeRect(16 * d, 16 * d, c.width - 32 * d, c.height - 32 * d);
+  const kx = 64 * d, ky = c.height - 64 * d; g.lineWidth = 2 * d; g.beginPath(); [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([x, y]) => { g.moveTo(kx, ky); g.lineTo(kx + x * 34 * d, ky + y * 34 * d); }); g.stroke(); g.fillStyle = '#c9a24a'; g.font = `${14 * d}px serif`; g.textAlign = 'center'; g.fillText('N', kx, ky - 40 * d); // map border and compass
+  const a = 0; // the world never goes dark
+  if (a > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(10,15,50,${a})`; g.fillRect(0, 0, c.width, c.height); }
+}
+
+/* ===== TOWN VIEW ===== */
+const BUILD = [['h', 'house'], ['f', 'farm'], ['t', 'temple'], ['w', 'wall']];
+function openTown(t) { S.tw = t; S.view = 'town'; $('#map').hidden = true; $('#town').hidden = false; updateTown(); }
+function closeTown() { S.view = 'map'; S.tw = null; $('#map').hidden = false; $('#town').hidden = true; dirty = true; }
+function updateTown() {
+  const t = S.tw; if (!t) return; $('#tname').textContent = t.name;
+  $('#tinfo').textContent = t.kind === 'ruin' ? 'Only ruins remain here. Found a new town on this hex to bring life back.' : `A ${tier(t.pop)} of ${Math.round(t.pop)} people on ${S.w.tiles[t.i].b} land. ${t.h} houses, ${t.f} farms, ${t.t} temples, ${t.w ? 'walled' : 'no wall'}. Houses set the room for newcomers and farms feed them.`;
+}
+function drawTown(now) {
+  const t = S.tw, c = $('#tv'), g = sizeCanvas(c), w = c.width, h = c.height, cx = w / 2, cy = h / 2, sc = Math.min(w, h) / 360, r = rng(t.name), t0 = calm ? 0 : now;
+  g.fillStyle = BI[S.w.tiles[t.i].b].c; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(40,25,10,.18)'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,220,.10)' : 'rgba(20,40,10,.14)'; g.fillRect(r() * w, r() * h, 2 * sc + 1, 2 * sc + 1); }
+  g.strokeStyle = '#8a6a3a'; g.lineWidth = 10 * sc; g.beginPath(); g.moveTo(cx, 0); g.lineTo(cx, h); g.moveTo(0, cy); g.lineTo(w, cy); g.stroke();
+  for (let i = 0; i < 40; i++) { const x = r() * w, y = r() * h; if (Math.hypot(x - cx, y - cy) > 120 * sc) { g.fillStyle = '#2f5a2c'; g.beginPath(); g.arc(x, y, 9 * sc, 0, 7); g.fill(); } }
+  for (let f = 0; f < t.f; f++) { const a = f * 2.4 + .5, x = cx + Math.cos(a) * 190 * sc, y = cy + Math.sin(a) * 140 * sc; g.fillStyle = '#d6b95c'; g.fillRect(x - 24 * sc, y - 14 * sc, 48 * sc, 28 * sc); g.strokeStyle = '#8a6a1f'; g.lineWidth = 1; for (let s = -12; s <= 12; s += 6) { g.beginPath(); g.moveTo(x - 24 * sc, y + s * sc); g.lineTo(x + 24 * sc, y + s * sc); g.stroke(); } }
+  const night = false;
+  for (let k = 0; k < Math.min(t.h, 90); k++) {
+    const a = k * 2.4, d = (24 + 9 * Math.sqrt(k + 1) * 2) * sc, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * .8, s = (9 - Math.min(4, t.h / 25)) * sc;
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(x + s * .4, y + s * 1.1, s * 1.5, s * .5, 0, 0, 7); g.fill();
+    g.fillStyle = '#f3e3b0'; g.fillRect(x - s, y - s * .6, s * 2, s * 1.5); g.fillStyle = ['#b8324f', '#2a8a86', '#c9a24a'][k % 3]; g.beginPath(); g.moveTo(x - s * 1.2, y - s * .6); g.lineTo(x, y - s * 1.8); g.lineTo(x + s * 1.2, y - s * .6); g.fill();
+    if (night) { g.fillStyle = '#ffd76a'; g.fillRect(x - 2 * sc, y - 1, 4 * sc, 4 * sc); }
+  }
+  for (let k = 0; k < t.t; k++) { const x = cx + (k - (t.t - 1) / 2) * 40 * sc, y = cy; g.fillStyle = '#e8dcc0'; g.fillRect(x - 12 * sc, y - 30 * sc, 24 * sc, 40 * sc); g.fillStyle = '#c9a24a'; g.beginPath(); g.moveTo(x - 16 * sc, y - 30 * sc); g.lineTo(x, y - 58 * sc); g.lineTo(x + 16 * sc, y - 30 * sc); g.fill(); }
+  if (t.w) { g.strokeStyle = '#6b5a48'; g.lineWidth = 8 * sc; g.setLineDash([14 * sc, 6 * sc]); g.beginPath(); g.ellipse(cx, cy, 165 * sc, 135 * sc, 0, 0, 7); g.stroke(); g.setLineDash([]); }
+  g.fillStyle = '#2a1d12';
+  for (let p = 0; p < Math.min(t.pop, 60); p++) { const a = hs(t.name + p) % 628 / 100, d = (hs(t.name + 'd' + p) % 130) * sc, ph = p * 1.7; g.beginPath(); g.arc(cx + Math.cos(a) * d + Math.sin(t0 * .001 + ph) * 12 * sc, cy + Math.sin(a) * d * .8 + Math.cos(t0 * .0013 + ph) * 8 * sc, 2.4 * sc, 0, 7); g.fill(); }
+  if (night) { g.fillStyle = 'rgba(10,15,50,.5)'; g.fillRect(0, 0, w, h); }
+}
+
+/* ===== SIMULATION ===== */
+const chron = [];
+let ships = [];
+const isPort = (t) => t.kind === 'town' && nbrs(t.i % W, t.i / W | 0).some((j) => S.w.tiles[j].b === 'water');
+function note(m, live, key) {
+  if (S.sum) { const k = key || 'misc'; S.sum[k] = (S.sum[k] || 0) + 1; return; } // while skipping, events are only counted
+  chron.unshift(`Year ${300 + Math.floor(S.clock / 518400)}: ${m}`); if (chron.length > 60) chron.pop(); if (live) toast(m);
+}
+function big(m, i) {
+  if (S.sum) { (S.sum.heads = S.sum.heads || []).push(m); if (S.sum.heads.length > 6) S.sum.heads.shift(); } else { chron.unshift(`\u2605 Year ${300 + Math.floor(S.clock / 518400)}: ${m}`); toast(m); }
+  S.big = m; S.hl = i;
+}
+function seaPath(a, b) { // breadth-first search through water hexes only, so ships never cross land
+  const tl = S.w.tiles, start = nbrs(a % W, a / W | 0).filter((j) => tl[j].b === 'water'), goal = new Set(nbrs(b % W, b / W | 0).filter((j) => tl[j].b === 'water')), prev = new Map(start.map((j) => [j, -1])), q = [...start];
+  while (q.length && prev.size < 1500) { const c = q.shift(); if (goal.has(c)) { const p = []; for (let x = c; x !== -1; x = prev.get(x)) p.unshift(x); return [a, ...p, b]; } for (const j of nbrs(c % W, c / W | 0)) if (tl[j].b === 'water' && !prev.has(j)) { prev.set(j, c); q.push(j); } }
+  return null;
+}
+function sailShips() {
+  ships.forEach((s) => { s.t += .1; });
+  ships.filter((s) => s.t >= s.p.length - 1).forEach((s) => { const a = townAt(s.p[0]), b = townAt(s.p[s.p.length - 1]); if (a && b && a.kind === 'town' && b.kind === 'town') { a.pop += 3; b.pop += 3; note(`A trading ship from ${a.name} reaches ${b.name}.`, false, 'voyage'); } });
+  ships = ships.filter((s) => s.t < s.p.length - 1);
+  if (ships.length < 8 + S.civ.era * 3 && Math.random() < .02) { const ports = S.w.towns.filter(isPort); if (ports.length > 1) { const a = ports[Math.random() * ports.length | 0], b = ports[Math.random() * ports.length | 0]; if (a !== b && a.pop > 60) { const p = seaPath(a.i, b.i); if (p) ships.push({ p, t: 0 }); } } }
+}
+function colonize(t, live) {
+  const ring = new Set(nbrs(t.i % W, t.i / W | 0).flatMap((j) => nbrs(j % W, j / W | 0)));
+  const free = [...ring].filter((j) => !townAt(j) && !['water', 'mountain'].includes(S.w.tiles[j].b)); if (!free.length) return;
+  const j = free[Math.random() * free.length | 0]; t.pop *= .85;
+  S.w.towns.push({ i: j, name: syl(rng(S.seed + 'c' + j + S.clock)), pop: 20, h: 4, f: 1, t: 0, w: 0, kind: 'town', fc: fcOf(t) });
+  note(`Settlers from ${t.name} found a new village.`, live, 'settled');
+}
+function stepWorld(live) {
+  S.clock += 120; const T = S.w.towns, tl = S.w.tiles;
+  T.slice().forEach((t) => {
+    if (t.kind !== 'town') return;
+    const K = BI[tl[t.i].b].food * 25 + t.f * 45 + 10; // what the land and farms can feed
+    t.pop += .0035 * t.pop * (1 - t.pop / K) + .02;
+    if (t.pop > K * .8 && t.f < 40 && Math.random() < .004) t.f++;
+    t.h = Math.max(t.h, Math.ceil(t.pop / 5));
+    if (t.pop > 150 && !t.t && Math.random() < .004) { t.t = 1; note(`${t.name} raises a temple.`, live); }
+    if (t.pop > 300 && !t.w && Math.random() < .003) { t.w = 1; note(`${t.name} builds a wall and becomes a city.`, live); }
+    if (Math.random() < .00012) { t.pop *= .55; note(`Plague strikes ${t.name}.`, live); }
+    if (t.pop > 150 && t.pop > K * .9 && T.length < 40 && Math.random() < .004) colonize(t, live);
+    if (t.pop < 2) { t.kind = 'ruin'; t.pop = 0; note(`${t.name} has died out and fallen to ruin.`, live); }
+  });
+  sailShips();
+}
+function startSkip() {
+  const n = +$('#skipn').value, u = +$('#skipu').value;
+  if (!(n >= 1)) return toast('Enter a number of 1 or more, then press Skip forward.');
+  const steps = Math.round(n * u / 2); // each step is two hours
+  if (steps > 900000) return toast('That is over 200 years in one jump. Try 200 years or fewer.');
+  U.push(snap()); Rd.length = 0; S.prevSpeed = S.speed || 1; S.skip = S.skipTotal = steps; S.speed = 0; hud();
+}
+function skipFrame() {
+  const t0 = performance.now(); while (S.skip > 0 && performance.now() - t0 < 12) { stepWorld(false); S.skip--; }
+  $('#skiptxt').textContent = S.skip > 0 ? `Skipping forward… ${Math.round(100 - S.skip / S.skipTotal * 100)}%. Press Pause to stop early.` : '';
+  if (S.skip <= 0) { S.speed = S.prevSpeed; toast('Time has caught up. Read the chronicle to see what happened.'); }
+  changed();
+}
+function explore() {
+  const C = S.civ, mark = (i, rr) => { const q0 = i % W, r0 = i / W | 0; for (let r = Math.max(0, r0 - rr); r <= Math.min(H - 1, r0 + rr); r++) for (let q = Math.max(0, q0 - rr - 1); q <= Math.min(W - 1, q0 + rr + 1); q++) { const dx = q + (r & 1) * .5 - q0 - (r0 & 1) * .5, dy = (r - r0) * .866; if (dx * dx + dy * dy <= rr * rr * 1.02) C.seen.add(r * W + q); } };
+  S.w.towns.forEach((t) => { if (t.kind === 'town') { const rr = Math.min(150, (C.era >= 6 ? 40 : 0) + 1 + tierIdx(t.pop) + (C.era >= 3 ? 1 : 0) + Math.floor(C.reach || 0)); if (rr > (t.er || 0)) { t.er = rr; mark(t.i, rr); } } }); // satellites reveal everything
+  ships.forEach((s) => mark(s.p[Math.min(Math.floor(s.t), s.p.length - 1)], 2));
+  const pct = Math.floor(C.seen.size / (W * H) * 4); if (pct > (C.mile || 0)) { C.mile = pct; if (!S.sum) chron.unshift(`Explorers have now charted ${pct * 25}% of the world.`); }
+}
+function startWar(force) {
+  const T = S.w.towns.filter((t) => t.kind === 'town');
+  for (let k = 0; k < 24 && T.length > 1; k++) {
+    const a = T[Math.random() * T.length | 0], b = T[Math.random() * T.length | 0], [ax, ay] = center(a.i), [bx, by] = center(b.i);
+    if (a !== b && fcOf(a) !== fcOf(b) && Math.hypot(ax - bx, ay - by) < R * 1.73 * 9 && !S.civ.wars.some((w) => w.a === a.i || w.b === b.i)) { S.civ.wars.push({ a: a.i, b: b.i }); big(`War! ${a.name} marches against ${b.name}.`, a.i); return; }
+  }
+  if (force) toast('No two rival towns are close enough to fight. Found more towns near each other, or let your people expand.');
+}
+function warStep(m, live) {
+  const C = S.civ;
+  if (C.era >= 1 && C.wars.length < 3 && Math.random() < Math.min(1, .0004 * m)) startWar();
+  C.wars = C.wars.filter((w) => {
+    const a = townAt(w.a), b = townAt(w.b); if (!a || !b || a.kind !== 'town' || b.kind !== 'town' || fcOf(a) === fcOf(b)) return false;
+    const pa = a.pop, pb = b.pop, k = Math.min(.4, .004 * m); a.pop -= pb * k * Math.random(); b.pop -= pa * k * Math.random();
+    const win = a.pop > b.pop ? [a, b] : [b, a];
+    if (win[1].pop < win[0].pop * .4 || win[1].pop < 8) { win[1].fc = fcOf(win[0]); win[1].pop = Math.max(win[1].pop, 5); big(`${win[0].name} conquers ${win[1].name}.`, win[1].i); return false; }
+    if (Math.random() < Math.min(1, .002 * m)) { note(`${a.name} and ${b.name} make peace.`, live, 'peace'); return false; }
+    return true;
+  });
+}
+function launch(t) {
+  t.pop -= 40; S.civ.col++; if (!S.sum) rockets.push({ i: t.i, t0: performance.now() });
+  if (S.civ.col === 1) big(`The first rocket leaves ${t.name} for the stars.`, t.i); else if (S.civ.col % 5 === 0) big(`${S.civ.col} ships have now left the world for new homes.`, t.i); else note(`A ship leaves ${t.name} for the stars.`, false, 'launch');
+}
+function grow(m, live) { // m is how many two-hour ticks this step covers, so long skips stay fast
+  S.clock += 120 * m; const T = S.w.towns, tl = S.w.tiles, C = S.civ, pr = (p) => Math.random() < Math.min(1, p * m); let total = 0, cities = 0;
+  T.slice().forEach((t) => {
+    if (t.kind !== 'town') return;
+    const K = BI[tl[t.i].b].food * 25 + t.f * 45 + 10 + C.era * 30;
+    t.pop = K / (1 + (K / Math.max(t.pop, 1) - 1) * Math.exp(-.0035 * m)) + .02 * m;
+    if (t.pop > K * .8 && t.f < 60 && pr(.004)) t.f++;
+    t.h = Math.max(t.h, Math.ceil(t.pop / 5));
+    if (t.pop > 150 && !t.t && pr(.004)) { t.t = 1; note(`${t.name} raises a temple.`, live, 'temple'); }
+    if (t.pop > 300 && !t.w && pr(.003)) { t.w = 1; note(`${t.name} builds a wall and becomes a city.`, live, 'wall'); }
+    if (pr(.00012)) { t.pop *= .55; note(`Plague strikes ${t.name}.`, live, 'plague'); }
+    if (t.pop > 150 && t.pop > K * .9 && T.length < 400 && pr(.004)) colonize(t, live);
+    if (C.era >= 6 && t.pop > 400 && pr(.0015)) launch(t);
+    if (t.pop < 2) { t.kind = 'ruin'; t.pop = 0; note(`${t.name} has died out and fallen to ruin.`, live, 'ruin'); }
+    total += t.pop; if (t.pop >= 300) cities++;
+  });
+  C.sci += .00003 * Math.sqrt(total) * (1 + cities) * m;
+  if (C.sci > 150 * (C.era + 1) && C.era < ERAS.length - 1) { C.sci = 0; C.era++; big(`The ${ERAS[C.era]} dawns across the world.`, (T.filter((t) => t.kind === 'town').sort((a, b) => b.pop - a.pop)[0] || { i: -1 }).i); }
+  C.reach = (C.reach || 0) + .0002 * m * (1 + C.era * .3); warStep(m, live);
+  for (let k = 0; k < Math.min(m, 4); k++) sailShips();
+}
+function skipTime(until) {
+  const n = +$('#skipn').value, u = +$('#skipu').value;
+  if (!until && !(n >= 1)) return toast('Enter a number of 1 or more, then press Skip forward.');
+  const T = until ? 1.2e7 : n * u / 2, m = until ? 12 : Math.max(1, Math.ceil(T / 20000));
+  U.push(snap()); Rd.length = 0; S.prevSpeed = S.speed || 1; S.speed = 0; S.hl = -1; S.big = null;
+  S.sum = { t0: S.clock, seen0: S.civ.seen.size }; S.skip = Math.ceil(T / m); S.skipTotal = S.skip; S.skipM = m; S.until = !!until; hud();
+}
+function finishSkip(label) {
+  const s = S.sum; if (!s) return; S.sum = null;
+  const span = S.clock - s.t0, p = [];
+  [['settled', 'new settlements'], ['temple', 'temples'], ['wall', 'walled cities'], ['plague', 'plagues'], ['voyage', 'voyages'], ['launch', 'rocket launches'], ['peace', 'peace treaties'], ['ruin', 'towns lost']].forEach(([k, n]) => { if (s[k]) p.push(`${s[k]} ${n}`); });
+  const disc = S.civ.seen.size - s.seen0; if (disc > 0) p.push(`${disc} more hexes explored`);
+  (s.heads || []).forEach((h) => chron.unshift(`\u2605 ${h}`));
+  chron.unshift(`${label} (${span >= 518400 ? Math.round(span / 518400) + ' years' : Math.round(span / 1440) + ' days'}): ${p.join(', ') || 'a quiet stretch'}.`);
+  if (chron.length > 60) chron.length = 60; toast(`${label}. The chronicle has the summary.`);
+}
+function skipRun() {
+  const t0 = performance.now(), stop = () => S.until && S.big;
+  while (S.skip > 0 && !stop() && performance.now() - t0 < 12) { grow(S.skipM, false); S.skip--; }
+  if (S.skip > 0 && !stop()) { $('#skiptxt').textContent = S.until ? 'Skipping ahead until something big happens\u2026' : `Skipping forward\u2026 ${Math.round(100 - S.skip / S.skipTotal * 100)}%. Press Pause to stop early.`; return changed(); }
+  S.skip = 0; S.speed = S.prevSpeed; $('#skiptxt').textContent = '';
+  finishSkip(S.until ? (S.big ? 'Skipped ahead to a turning point' : 'Skipped ahead, but nothing big happened') : 'Time skipped');
+  if (S.until && S.hl >= 0) { const c = $('#map'), [x, y] = center(S.hl); V.x = c.width / 2 - x * V.k; V.y = c.height / 2 - y * V.k; S.autofit = false; }
+  changed();
+}
+function simTick() {
+  grow(1, true);
+  const ph = S.sk ? S.sk.moon.ph : -1; S.sk = skyNow();
+  if (S.sk.moon.ph !== S.phase) { S.phase = S.sk.moon.ph; if (S.phase === 0 || S.phase === 4) toast(`A ${PHASES[S.phase]} rises over ${S.w.name}. Omens are strong tonight.`); }
+  changed();
+}
+
+/* ===== POWERS ===== */
+function setBiome(i, b) {
+  S.w.tiles[i].b = b; const t = townAt(i);
+  if (t && t.kind === 'town' && (b === 'water' || b === 'mountain')) { t.kind = 'ruin'; t.pop = 0; toast(`${t.name} was ${b === 'water' ? 'drowned' : 'buried'} by your hand.`); }
+}
+const d20 = () => 1 + Math.floor(Math.random() * 20);
+function click(i) {
+  if (i < 0 || (!S.omni && !S.civ.seen.has(i))) return i < 0 ? 0 : toast('That land is still unexplored. Let your people expand toward it, or use Show or hide unexplored land.'); S.focus = i; const t = townAt(i), b = S.w.tiles[i].b;
+  if (S.tool === 'look') { if (t) openTown(t); else showInfo(i); }
+  else if (S.tool === 'town') {
+    if (t) return toast('A town or ruin already stands here. Pick an empty hex.');
+    if (b === 'water' || b === 'mountain') return toast('Nothing can be built on water or mountains. Pick a land hex, or paint one first.');
+    act(() => { S.w.towns.push({ i, name: syl(rng(S.seed + 't' + i + S.clock)), pop: 25, h: 4, f: 1, t: 0, w: 0, kind: 'town' }); swell(); }); toast('A new town is founded.');
+  } else if (S.tool === 'bless') {
+    const roll = d20();
+    if (t && t.kind === 'town') act(() => { t.pop += roll * 2; t.f++; swell(); }), toast(`Fate rolled ${roll}. ${t.name} flourishes: ${roll * 2} new people and a new farm.`);
+    else if (b === 'desert' || b === 'tundra' || b === 'plains') act(() => { setBiome(i, b === 'plains' ? 'forest' : 'plains'); swell(); }), toast(`Fate rolled ${roll}. The land turns ${b === 'plains' ? 'green with forest' : 'to fertile plains'}.`);
+    else toast('Nothing to bless here yet. Click a town, or a bare plain, desert or tundra hex.');
+  } else if (S.tool === 'war') {
+    if (!t || t.kind !== 'town') return toast('Click a living town to make it march on its nearest rival.');
+    const [x, y] = center(t.i), foe = S.w.towns.filter((o) => o !== t && o.kind === 'town' && fcOf(o) !== fcOf(t)).map((o) => [o, Math.hypot(center(o.i)[0] - x, center(o.i)[1] - y)]).sort((a, b) => a[1] - b[1])[0];
+    if (!foe || foe[1] > R * 1.73 * 9) return toast('No rival town is close enough. Found one nearby first.');
+    act(() => { S.civ.wars.push({ a: t.i, b: foe[0].i }); big(`${t.name} marches on ${foe[0].name}.`, t.i); });
+  } else if (S.tool === 'smite') {
+    const roll = d20(), burn = { forest: 'plains', plains: 'desert', mountain: 'plains', swamp: 'desert', tundra: 'plains' };
+    if (t) { if (roll < 4) return toast(`Fate rolled ${roll}. The ${t.kind} shrugs off your wrath.`); act(() => { if (t.kind === 'town') { t.kind = 'ruin'; t.pop = 0; } else S.w.towns.splice(S.w.towns.indexOf(t), 1); }); toast(`Fate rolled ${roll}. ${t.name} is ${t.kind === 'ruin' ? 'reduced to ruins' : 'wiped from the map'}.`); }
+    else if (burn[b]) act(() => setBiome(i, burn[b])), toast(`Fate rolled ${roll}. The ${b} is scorched into ${burn[b]}.`);
+    else toast('Nothing here to smite. Click a town, a ruin or a patch of land.');
+  }
+}
+function paint(e) { const i = hexAt(e); if (i >= 0 && (S.omni || S.civ.seen.has(i)) && S.w.tiles[i].b !== S.biome) { S.focus = i; setBiome(i, S.biome); changed(); } }
+
+/* ===== AUDIO ===== */
+const A = { ctx: null, step: 0, bar: 0, next: 0 };
+const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+function musicParams() {
+  const b = S.w.tiles[S.focus].b, h = hourOf(), mood = h < 5 || h >= 21 ? 'night' : h < 8 ? 'dawn' : 'day';
+  return { b, mood, scale: SCALES[S.w.scales[b]], bpm: S.w.bpm[b] * (mood === 'night' ? .8 : mood === 'dawn' ? 1.1 : 1), root: S.w.root };
+}
+const chordMidi = (p, d) => { const n = p.scale.length; return p.root + 12 * Math.floor(d / n) + p.scale[((d % n) + n) % n]; };
+function tone(t, f, type, a, d, v, lp, send) {
+  const c = A.ctx, o = c.createOscillator(), g = c.createGain(), F = c.createBiquadFilter();
+  o.type = type; o.frequency.value = f; F.type = 'lowpass'; F.frequency.value = lp;
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); // no clicks: every note starts and ends near silence
+  o.connect(F); F.connect(g); g.connect(A.fade);
+  if (send) { const s = c.createGain(); s.gain.value = send; g.connect(s); s.connect(A.rev); }
+  o.start(t); o.stop(t + a + d + .05);
+}
+function beat(s, t, p) {
+  const cd = S.w.prog[A.bar % 4], m = S.w.mel[s], n = p.scale.length;
+  if (s === 0) [0, 2, 4].forEach((d) => { const f = mtof(chordMidi(p, cd + d) + 12); tone(t, f, 'sawtooth', .6, 3, .03, 900, .4); tone(t, f * 1.006, 'sawtooth', .6, 3, .03, 900, .4); });
+  if (s % 4 === 0) tone(t, mtof(chordMidi(p, cd)), 'sine', .01, .5, .25, 400, 0);
+  if (p.mood === 'dawn') tone(t, mtof(chordMidi(p, cd + [0, 2, 4, 7][s % 4] + n) + 12), 'triangle', .004, .25, .08, 3500, .3);
+  else if (m >= 0 && (p.mood !== 'night' || s % 4 === 0)) tone(t, mtof(chordMidi(p, cd + m + n) + 12), 'triangle', .004, p.mood === 'night' ? .7 : .3, .1, 3000, .35);
+}
+function audioTick() {
+  const c = A.ctx;
+  while (A.next < c.currentTime + .12) {
+    if (A.step === 0) { const p = musicParams(); if (p.b !== A.cur.b) { A.fade.gain.setTargetAtTime(.15, c.currentTime, .15); A.fade.gain.setTargetAtTime(1, c.currentTime + .8, .4); } A.cur = p; }
+    beat(A.step, A.next, A.cur); A.next += 60 / A.cur.bpm / 2; A.step = (A.step + 1) % 16; if (!A.step) A.bar++;
+  }
+}
+function swell() { if (!A.ctx || A.ctx.state !== 'running') return; const p = musicParams(), t = A.ctx.currentTime + .02; [0, 2, 4, 7].forEach((d, i) => tone(t, mtof(chordMidi(p, d) + 24), 'sawtooth', .3, 2.4, .05 - i * .005, 1400, .4)); }
+function toggleMusic() {
+  if (A.ctx) { if (A.ctx.state === 'running') A.ctx.suspend(); else A.ctx.resume(); return setTimeout(hud, 80); }
+  const C = window.AudioContext || window.webkitAudioContext; if (!C) return toast('This browser has no Web Audio. Try a recent Chrome, Safari or Firefox.');
+  const c = A.ctx = new C(), sr = c.sampleRate, comp = c.createDynamicsCompressor();
+  A.master = c.createGain(); A.master.gain.value = .6; A.master.connect(comp); comp.connect(c.destination); A.fade = c.createGain(); A.fade.connect(A.master);
+  const ir = c.createBuffer(2, sr * 2, sr); for (let k = 0; k < 2; k++) { const d = ir.getChannelData(k); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+  A.rev = c.createConvolver(); A.rev.buffer = ir; const rg = c.createGain(); rg.gain.value = .4; A.rev.connect(rg); rg.connect(A.master);
+  c.onstatechange = () => hud(); A.next = c.currentTime + .1; A.cur = musicParams(); setInterval(audioTick, 25); hud();
+}
+
+/* ===== DICE ===== */
+function parseDice(src) {
+  const bad = () => { throw new Error(`I could not read “${src}”. Try 4d6kh3+2, d20adv+5 or 3d8!.`); };
+  const f = src.toLowerCase().replace(/\s+/g, '').replace(/d(\d+)(adv|dis)/g, (m, s, k) => `2d${s}${k === 'adv' ? 'kh1' : 'kl1'}`), ts = f.match(/[+-]?[^+-]+/g);
+  if (!ts || ts.join('') !== f) bad();
+  return ts.map((t) => { const m = /^([+-]?)(?:(\d*)d(\d+|%)(!)?(?:(kh|kl)(\d+))?|(\d+))$/.exec(t); if (!m) bad(); return { sg: m[1] === '-' ? -1 : 1, n: +(m[2] || 1), s: m[3] === '%' ? 100 : +m[3], ex: !!m[4], kk: m[5], kn: +m[6], fl: m[7] === undefined ? null : +m[7] }; });
+}
+function rollDice(ts) {
+  let tot = 0; const parts = [];
+  ts.forEach((t) => {
+    if (t.fl !== null) { tot += t.sg * t.fl; parts.push(t.fl); return; }
+    const n = clamp(t.n, 1, 100), s = Math.max(1, t.s), ds = [];
+    for (let i = 0; i < n; i++) { let v = 1 + Math.floor(Math.random() * s), sum = v, g = 0; while (t.ex && s > 1 && v === s && g++ < 20) { v = 1 + Math.floor(Math.random() * s); sum += v; } ds.push(sum); }
+    const so = [...ds].sort((a, b) => b - a), kp = t.kk ? (t.kk === 'kh' ? so.slice(0, t.kn) : so.slice(-t.kn)) : so;
+    tot += t.sg * kp.reduce((a, b) => a + b, 0); parts.push(`[${ds.join(', ')}]${t.kk ? ' keep ' + kp.join(', ') : ''}`);
+  });
+  return { tot, txt: parts.join(' + ') };
+}
+function rollNow() { const src = $('#formula').value; try { const r = rollDice(parseDice(src)); $('#result').textContent = `${src} = ${r.tot}  (${r.txt})`; } catch (e) { $('#result').textContent = e.message; } }
+
+/* ===== RENDER ===== */
+function showInfo(i) {
+  if (i < 0) return; if (!S.omni && !S.civ.seen.has(i)) { $('#info').textContent = 'Unexplored land. Your people have not been here yet.'; return; } const t = S.w.tiles[i], tw = townAt(i);
+  $('#info').textContent = `A ${t.b} hex, ${Math.round(t.e * 100)}% elevation.${tw ? ` ${tw.name}: ${tw.kind === 'ruin' ? 'a ruin' : Math.round(tw.pop) + ' people'}.` : ''}`;
+}
+function hud() {
+  const d = Math.floor(S.clock / 1440), mm = S.clock % 1440, wv = ['clear', 'windy', 'rain', 'storm'][hs(S.seed + 'w' + d) % 100 < 45 ? 0 : hs(S.seed + 'w' + d) % 100 < 70 ? 1 : hs(S.seed + 'w' + d) % 100 < 92 ? 2 : 3];
+  $('#wname').textContent = S.w.name; $('#seed').value = S.seed;
+  $('#clock').textContent = `${d % 30 + 1} ${S.w.months[Math.floor(d % 360 / 30)]}, year ${Math.floor(d / 360) + 300}, ${String(mm / 60 | 0).padStart(2, '0')}:00 · ${wv}${S.unsaved ? ' · saving…' : ' · saved'}`;
+  document.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.speed === S.speed));
+  document.querySelectorAll('[data-tool]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.tool === S.tool));
+  document.querySelectorAll('#chips button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.b === S.biome));
+  $('#music').textContent = A.ctx && A.ctx.state === 'running' ? 'Music off' : 'Music on';
+  const C = S.civ, tw = S.w.towns.filter((t) => t.kind === 'town'), pop = tw.reduce((a, t) => a + t.pop, 0);
+  $('#civ').textContent = `${ERAS[C.era]}\nPeople: ${Math.round(pop)}\nSettlements: ${tw.length} (${tw.filter((t) => t.pop >= 300).length} cities)\nExplored: ${Math.round(C.seen.size / (W * H) * 100)}% of the world\nShips at sea: ${ships.length}\nWars: ${C.wars.length}\nOff-world colonies: ${C.col}`;
+  const lg = $('#log'); lg.textContent = ''; chron.slice(0, 14).forEach((m) => { const li = document.createElement('li'); li.textContent = m; lg.append(li); });
+  $('#hint').textContent = { look: 'Click a town to walk into it. Drag the map to pan, scroll to zoom.', paint: 'Pick a land type, then drag across the map to repaint it. Towns on water or mountains are lost.', town: 'Click an empty land hex to found a town.', bless: 'Click a town or bare land. Fate rolls a d20 for how much it helps.', smite: 'Click a town, ruin or land. Fate rolls a d20, and low rolls spare it.', war: 'Click a town to send it to war against its nearest rival.' }[S.tool];
+}
+function changed() { explore(); S.unsaved = true; if (!S.sk) S.sk = skyNow(); else S.sk = skyNow(); dirty = true; hud(); if (S.view === 'town') updateTown(); }
+let last = 0, acc = 0;
+function frame(now) {
+  const dt = Math.min(now - last, 250); last = now;
+  if (S.skip > 0) skipRun(); else if (S.speed) { acc += dt * S.speed; let n = 0; while (acc >= 500 && n++ < 4) { acc -= 500; simTick(); } }
+  if (S.view === 'town') drawTown(now); else if (dirty || S.easing) { dirty = false; drawMap(); }
+  if (S.view === 'town' && dirty) dirty = false;
+  requestAnimationFrame(frame);
+}
+
+/* ===== EVENT WIRING ===== */
+function wire() {
+  const cv = $('#map'); let drag = null;
+  cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); drag = { x: e.offsetX, y: e.offsetY, vx: V.x, vy: V.y, moved: false }; if (S.tool === 'paint') { U.push(snap()); Rd.length = 0; paint(e); } });
+  cv.addEventListener('pointermove', (e) => {
+    const i = hexAt(e); if (i !== S.hover) { S.hover = i; showInfo(i); dirty = true; }
+    if (!drag) return; if (S.tool === 'paint') return paint(e);
+    const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.hypot(dx, dy) > 5) drag.moved = true; if (drag.moved) { V.x = drag.vx + dx * dpr(); S.autofit = false; dirty = true; }
+  });
+  cv.addEventListener('pointerup', (e) => { const d = drag; drag = null; if (d && !d.moved && S.tool !== 'paint') click(hexAt(e)); });
+  cv.addEventListener('wheel', (e) => { e.preventDefault(); const f = e.deltaY < 0 ? 1.15 : 1 / 1.15, mx = e.offsetX * dpr(), my = e.offsetY * dpr(); V.x = mx - (mx - V.x) * f; V.y = my - (my - V.y) * f; V.k = clamp(V.k * f, .02, 6); S.autofit = false; dirty = true; }, { passive: false });
+  document.querySelectorAll('[data-speed]').forEach((b) => b.addEventListener('click', () => { S.speed = +b.dataset.speed; S.skip = 0; if (S.sum) finishSkip('Skip stopped early'); $('#skiptxt').textContent = ''; hud(); }));
+  document.querySelectorAll('[data-tool]').forEach((b) => b.addEventListener('click', () => { S.tool = b.dataset.tool; hud(); }));
+  $('#chips').innerHTML = NAMES.map((n) => `<button data-b="${n}" aria-label="${n}" title="${n}" style="background:${BI[n].c}"></button>`).join('');
+  document.querySelectorAll('#chips button').forEach((b) => b.addEventListener('click', () => { S.biome = b.dataset.b; S.tool = 'paint'; hud(); }));
+  $('#tbuild').innerHTML = BUILD.map(([k, n]) => `<button data-k="${k}" data-d="1">Build a ${n}</button><button data-k="${k}" data-d="-1">Tear down a ${n}</button>`).join('') + '<button id="bless2">Bless this town</button><button id="burn">Burn it to ruins</button>';
+  $('#tbuild').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b || !S.tw) return; const t = S.tw;
+    if (b.id === 'bless2') { const roll = d20(); act(() => { t.pop += roll * 2; t.f++; swell(); }); return toast(`Fate rolled ${roll}. ${t.name} flourishes.`); }
+    if (b.id === 'burn') return act(() => { t.kind = 'ruin'; t.pop = 0; t.h = t.f = t.t = t.w = 0; });
+    if (t.kind === 'ruin') return toast('This is a ruin. Go back and found a new town here first.');
+    const k = b.dataset.k, d = +b.dataset.d; if (k === 'w' && d > 0 && t.w) return toast('The town already has a wall.');
+    if (d < 0 && !t[k]) return toast('There is nothing of that kind left to tear down.');
+    act(() => { t[k] = k === 'w' ? +(d > 0) : t[k] + d; if (d > 0) swell(); });
+  });
+  $('#tclose').addEventListener('click', closeTown);
+  $('#undo').addEventListener('click', undo); $('#redo').addEventListener('click', redo); $('#music').addEventListener('click', toggleMusic);
+  $('#weave').addEventListener('click', (e) => {
+    if (!armed) { armed = true; e.target.textContent = 'Click again to replace this world'; armTimer = setTimeout(() => { armed = false; e.target.textContent = 'Weave a new world'; }, 3500); return; }
+    clearTimeout(armTimer); armed = false; e.target.textContent = 'Weave a new world';
+    const seed = $('#seed').value.trim(); if (!seed) return toast('The seed is empty. Type any word or phrase, then weave again.'); newWorld(seed);
+  });
+  $('#skip').addEventListener('click', () => skipTime(false));
+  $('#events').innerHTML = [['big', 'Skip to the next big event'], ['war', 'Declare a war'], ['peace', 'Make peace everywhere'], ['gold', 'Spark a golden age'], ['plague', 'Send a plague'], ['rocket', 'Launch a rocket'], ['center', 'Fit map to explored land'], ['omni', 'Show or hide unexplored land']].map(([k, n]) => `<button data-ev="${k}">${n}</button>`).join('');
+  $('#events').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return; const k = b.dataset.ev;
+    if (k === 'big') return skipTime(true);
+    if (k === 'omni') { S.omni = !S.omni; dirty = true; return; }
+    if (k === 'center') { S.autofit = true; dirty = true; return; }
+    if (k === 'rocket') return act(() => { const t = S.w.towns.filter((x) => x.kind === 'town').sort((a, b) => b.pop - a.pop)[0]; if (!t || t.pop < 60) return toast('Even the biggest town is too small to build a rocket. Let it grow past 60 people first.'); launch(t); });
+    if (k === 'war') return act(() => startWar(true));
+    if (k === 'peace') return act(() => { S.civ.wars = []; note('A grand peace is declared across the land.', true); });
+    if (k === 'gold') return act(() => { S.civ.sci += 120 * (S.civ.era + 1); note('A golden age of learning begins.', true); });
+    if (k === 'plague') act(() => { const T = S.w.towns.filter((t) => t.kind === 'town'); if (!T.length) return toast('There are no living towns to strike.'); const t = T[Math.random() * T.length | 0]; t.pop *= .5; note(`A plague you sent strikes ${t.name}.`, true); });
+  });
+  window.addEventListener('resize', () => { dirty = true; });
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
+    else if (e.key === ' ') { e.preventDefault(); S.speed = S.speed ? 0 : 1; hud(); } else if (e.key === 'Escape' && S.view === 'town') closeTown();
+  });
+  setInterval(save, 3000);
+}
+
+/* ===== START ===== */
+if (!load()) newWorld(S.seed);
+S.focus = S.w.towns[0].i; S.sk = skyNow(); S.phase = S.sk.moon.ph;
+wire(); hud(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
